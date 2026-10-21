@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareHub - P2P Book & Equipment Sharing</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar styles */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Device frame container modes */
+        .device-mobile {
+            max-width: 440px;
+            margin: 0 auto;
+            min-height: 100vh;
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+
+        .device-responsive {
+            max-width: 100%;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Pulse animation for active handshakes */
+        @keyframes pulse-light {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-subtle {
+            animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 transition-all duration-300">
+
+    <!-- Container Wrapper (Responsive / Mobile View toggleable) -->
+    <div id="appContainer" class="device-mobile bg-gray-50 pb-24 relative flex flex-col min-h-screen">
+
+        <!-- Top Navigation Header -->
+        <header class="bg-brand-900 text-white p-4 sticky top-0 z-30 shadow-md">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-bold tracking-tight">ShareHub</h1>
+                        <span class="text-[10px] bg-blue-800/80 text-blue-200 border border-blue-600 px-1.5 py-0.5 rounded font-mono">SRMCEM</span>
+                    </div>
+                    <p class="text-xs text-blue-200 flex items-center gap-1.5 mt-0.5">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                        <span>Verified Campus Network</span>
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <!-- Frame Toggle Button -->
+                    <button onclick="toggleViewMode()" title="Toggle Desktop/Mobile View" class="p-2 text-blue-200 hover:text-white rounded-lg hover:bg-white/10 transition">
+                        <i id="viewModeIcon" class="fa-solid fa-expand text-sm"></i>
+                    </button>
+
+                    <!-- Notifications Button -->
+                    <button onclick="toggleNotificationsDrawer()" class="relative p-2 text-blue-200 hover:text-white rounded-lg hover:bg-white/10 transition">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span id="notificationBadge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-brand-900"></span>
+                    </button>
+
+                    <!-- User Profile Avatar -->
+                    <button onclick="openProfileModal()" class="w-9 h-9 rounded-full bg-brand-700 border-2 border-blue-300 flex items-center justify-center font-bold text-xs shadow-inner hover:ring-2 hover:ring-white transition">
+                        ST
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Custom Alert Banner / Toast Container -->
+        <div id="toastContainer" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none space-y-2"></div>
+
+        <!-- ================= VIEW 1: HOME / EXPLORE FEED ================= -->
+        <main id="view-home" class="p-4 space-y-4 flex-1">
+            <!-- Search & Filter Controls -->
+            <div class="space-y-3">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400 text-sm"></i>
+                    <input type="text" id="searchInput" placeholder="Search textbooks, drafting tools, Arduino..."
+                        class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent text-sm bg-white shadow-sm"
+                        onkeyup="filterItems()">
+                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Horizontal Filter Chips -->
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar text-xs py-1 -mx-4 px-4">
+                    <button onclick="setFilter('all', this)" class="filter-chip active bg-brand-800 text-white px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm transition">All Items</button>
+                    <button onclick="setFilter('free', this)" class="filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition">Free / Donate</button>
+                    <button onclick="setFilter('rent', this)" class="filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition">Micro-Rentals</button>
+                    <button onclick="setFilter('sell', this)" class="filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition">For Sale</button>
+                    <button onclick="setFilter('books', this)" class="filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition">Textbooks</button>
+                    <button onclick="setFilter('electronics', this)" class="filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition">Electronics</button>
+                </div>
+            </div>
+
+            <!-- Quick Category Grid -->
+            <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div onclick="setFilter('books')" class="bg-white p-2.5 rounded-xl border border-gray-200/80 shadow-sm flex flex-col items-center gap-1.5 cursor-pointer hover:border-brand-500 hover:bg-blue-50/50 transition">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-brand-700 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-book"></i>
+                    </div>
+                    <span class="font-medium text-gray-700">Books</span>
+                </div>
+                <div onclick="setFilter('electronics')" class="bg-white p-2.5 rounded-xl border border-gray-200/80 shadow-sm flex flex-col items-center gap-1.5 cursor-pointer hover:border-amber-500 hover:bg-amber-50/50 transition">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-microchip"></i>
+                    </div>
+                    <span class="font-medium text-gray-700">Lab Kits</span>
+                </div>
+                <div onclick="setFilter('drafting')" class="bg-white p-2.5 rounded-xl border border-gray-200/80 shadow-sm flex flex-col items-center gap-1.5 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-compass-drafting"></i>
+                    </div>
+                    <span class="font-medium text-gray-700">Drafting</span>
+                </div>
+                <div onclick="setFilter('others')" class="bg-white p-2.5 rounded-xl border border-gray-200/80 shadow-sm flex flex-col items-center gap-1.5 cursor-pointer hover:border-purple-500 hover:bg-purple-50/50 transition">
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-flask"></i>
+                    </div>
+                    <span class="font-medium text-gray-700">Aprons</span>
+                </div>
+            </div>
+
+            <!-- Feed Header & Active Count -->
+            <div class="flex justify-between items-center pt-2">
+                <div>
+                    <h2 class="text-sm font-bold text-gray-800">Campus Stream</h2>
+                    <p id="itemCounter" class="text-[11px] text-gray-500">Loading listings...</p>
+                </div>
+                <div class="flex items-center gap-1 text-[11px] font-medium text-brand-700 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                    <i class="fa-solid fa-location-dot text-red-500"></i>
+                    <span>Tiwariganj Block</span>
+                </div>
+            </div>
+
+            <!-- Active Inventory List Container -->
+            <div id="itemsContainer" class="space-y-3">
+                <!-- Dynamically populated -->
+            </div>
+        </main>
+
+        <!-- ================= VIEW 2: ADD LISTING FORM ================= -->
+        <main id="view-add" class="p-4 space-y-4 hidden flex-1">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">List an Item for Sharing</h2>
+                <p class="text-xs text-gray-500">Help fellow SRMCEM students by donating, renting, or selling tools.</p>
+            </div>
+
+            <form id="addListingForm" onsubmit="handleFormSubmit(event)" class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">Item Title *</label>
+                    <input type="text" id="formTitle" required placeholder="e.g. Engineering Physics - Vol 1"
+                        class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Category *</label>
+                        <select id="formCategory" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none bg-white">
+                            <option value="books">Textbooks & Notes</option>
+                            <option value="electronics">Electronics & Lab Kits</option>
+                            <option value="drafting">Drafting Equipment</option>
+                            <option value="others">Lab Aprons & Uniforms</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Subject / Code</label>
+                        <input type="text" id="formDept" placeholder="e.g. KAS-101 / CSE" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Listing Type *</label>
+                        <select id="typeSelect" onchange="togglePriceInput(this)" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none bg-white">
+                            <option value="free">Donate (Free)</option>
+                            <option value="rent">Micro-Rental</option>
+                            <option value="sell">Direct Sale</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label id="priceLabel" class="block font-semibold text-gray-700 mb-1">Price (₹)</label>
+                        <input type="number" id="priceInput" disabled placeholder="0" min="0" value="0"
+                            class="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-brand-600 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">Pickup Location on Campus *</label>
+                    <input type="text" id="formLocation" required placeholder="e.g. Hostel Block B / Central Library Gate" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">Icon Representation</label>
+                    <div class="grid grid-cols-5 gap-2 text-center">
+                        <label class="cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 hover:bg-gray-50 text-brand-700">
+                            <input type="radio" name="iconOption" value="fa-book" checked class="hidden peer">
+                            <i class="fa-solid fa-book text-lg peer-checked:text-brand-600"></i>
+                            <span class="text-[9px]">Book</span>
+                        </label>
+                        <label class="cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 hover:bg-gray-50 text-amber-600">
+                            <input type="radio" name="iconOption" value="fa-microchip" class="hidden peer">
+                            <i class="fa-solid fa-microchip text-lg"></i>
+                            <span class="text-[9px]">Kit</span>
+                        </label>
+                        <label class="cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 hover:bg-gray-50 text-emerald-600">
+                            <input type="radio" name="iconOption" value="fa-compass-drafting" class="hidden peer">
+                            <i class="fa-solid fa-compass-drafting text-lg"></i>
+                            <span class="text-[9px]">Draft</span>
+                        </label>
+                        <label class="cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 hover:bg-gray-50 text-purple-600">
+                            <input type="radio" name="iconOption" value="fa-flask" class="hidden peer">
+                            <i class="fa-solid fa-flask text-lg"></i>
+                            <span class="text-[9px]">Apron</span>
+                        </label>
+                        <label class="cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 hover:bg-gray-50 text-gray-600">
+                            <input type="radio" name="iconOption" value="fa-calculator" class="hidden peer">
+                            <i class="fa-solid fa-calculator text-lg"></i>
+                            <span class="text-[9px]">Tool</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">Item Description / Condition</label>
+                    <textarea id="formDesc" rows="2" placeholder="Mention edition, working condition, or return expectations..." class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 focus:outline-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-semibold py-3 rounded-lg shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Publish Item Listing</span>
+                </button>
+            </form>
+        </main>
+
+        <!-- ================= VIEW 3: EXCHANGES & HANDSHAKE ACTIVITY ================= -->
+        <main id="view-activity" class="p-4 space-y-4 hidden flex-1">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800">My Exchanges & Handshakes</h2>
+                    <p class="text-xs text-gray-500">Track active rentals, handshakes, and returns.</p>
+                </div>
+                <span id="exchangeCountBadge" class="bg-brand-100 text-brand-800 text-xs font-bold px-2.5 py-1 rounded-full">0 Active</span>
+            </div>
+
+            <!-- Handshake / Activity Tabs -->
+            <div id="activityContainer" class="space-y-3">
+                <!-- Injected via JavaScript -->
+            </div>
+        </main>
+
+        <!-- ================= BOTTOM PERSISTENT NAVIGATION ================= -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 py-2 px-6 flex justify-between items-center z-40 text-xs shadow-lg">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-brand-800 font-bold">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="switchTab('add')" id="nav-add" class="flex flex-col items-center gap-1 text-gray-400 hover:text-brand-700 transition">
+                <i class="fa-solid fa-circle-plus text-2xl text-brand-800"></i>
+                <span>List Item</span>
+            </button>
+            <button onclick="switchTab('activity')" id="nav-activity" class="flex flex-col items-center gap-1 text-gray-400 hover:text-brand-700 transition relative">
+                <i class="fa-solid fa-handshake text-lg"></i>
+                <span>Activity</span>
+                <span id="navActivityDot" class="hidden absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+        </nav>
+
+        <!-- ================= MODAL 1: REQUEST ITEM CHECKOUT ================= -->
+        <div id="requestModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+            <div class="bg-white rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200">
+                <div class="flex justify-between items-start border-b pb-3">
+                    <div>
+                        <h3 class="font-bold text-base text-gray-800" id="reqModalTitle">Request Item</h3>
+                        <p class="text-xs text-gray-500" id="reqModalSubtitle">Select rental duration and pickup time</p>
+                    </div>
+                    <button onclick="closeRequestModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <form id="requestForm" onsubmit="confirmItemRequest(event)" class="space-y-3 text-xs">
+                    <input type="hidden" id="reqItemId">
+                    
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-1">
+                        <div class="flex justify-between font-bold text-brand-900 text-sm">
+                            <span id="reqItemName">Item Name</span>
+                            <span id="reqItemPrice">₹0</span>
+                        </div>
+                        <p class="text-gray-600 text-[11px]" id="reqItemOwner">Owner: Sample User</p>
+                        <p class="text-gray-600 text-[11px]" id="reqItemLoc"><i class="fa-solid fa-location-dot text-red-500 mr-1"></i>Pickup: Main Library</p>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Rental / Request Duration</label>
+                        <select id="reqDuration" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 bg-white">
+                            <option value="1 Week">1 Week Borrow</option>
+                            <option value="2 Weeks">2 Weeks Borrow</option>
+                            <option value="Entire Semester">Entire Semester</option>
+                            <option value="Permanent (Buy/Keep)">Permanent (Donation/Sale)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Preferred Pickup Time Today</label>
+                        <select id="reqTime" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600 bg-white">
+                            <option value="4:30 PM (After Classes)">4:30 PM (After Classes)</option>
+                            <option value="1:15 PM (Lunch Break)">1:15 PM (Lunch Break)</option>
+                            <option value="5:30 PM (Hostel Gate)">5:30 PM (Hostel Gate)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">Note for Lender (Optional)</label>
+                        <input type="text" id="reqNote" placeholder="e.g. Need this for upcoming lab exam" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-600">
+                    </div>
+
+                    <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-semibold py-3 rounded-xl shadow mt-2 transition text-xs">
+                        Confirm & Generate Handshake
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= MODAL 2: QR HANDSHAKE VERIFICATION ================= -->
+        <div id="qrModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl p-6 text-center max-w-xs w-full space-y-4 shadow-2xl relative">
+                <button onclick="closeQRModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                
+                <div>
+                    <h3 class="font-bold text-base text-gray-800">P2P Handshake Verification</h3>
+                    <p class="text-xs text-gray-500 mt-1">Show this QR code to the lender when picking up the item on campus.</p>
+                </div>
+
+                <!-- Generated SVG QR Code -->
+                <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 inline-block shadow-inner">
+                    <svg class="w-40 h-40 mx-auto text-brand-900" viewBox="0 0 100 100" fill="currentColor">
+                        <!-- Custom QR Graphic Pattern -->
+                        <path d="M0,0 h30 v30 h-30 z M40,0 h20 v10 h-20 z M70,0 h30 v30 h-30 z M10,10 h10 v10 h-10 z M80,10 h10 v10 h-10 z M0,40 h10 v20 h-10 z M20,40 h30 v10 h-30 z M60,40 h40 v10 h-40 z M0,70 h30 v30 h-30 z M10,80 h10 v10 h-10 z M40,60 h20 v20 h-20 z M70,70 h10 v10 h-10 z M90,70 h10 v30 h-10 z M40,90 h30 v10 h-30 z"/>
+                    </svg>
+                </div>
+
+                <p id="qrTxId" class="text-[11px] font-mono text-gray-500 bg-gray-100 p-1.5 rounded border">TXID: AKTU-2026-88291</p>
+
+                <div class="pt-1">
+                    <button onclick="confirmHandshakeScan()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Simulate Successful Scan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL 3: NOTIFICATIONS DRAWER ================= -->
+        <div id="notificationsDrawer" class="fixed inset-0 bg-black/50 z-50 flex justify-end hidden">
+            <div class="bg-white w-full max-w-xs h-full p-4 space-y-4 shadow-2xl overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-bell text-brand-700"></i>
+                        <span>Campus Notifications</span>
+                    </h3>
+                    <button onclick="toggleNotificationsDrawer()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2 text-xs" id="notificationsContainer">
+                    <!-- Dynamic notifications -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL 4: USER PROFILE & BADGE ================= -->
+        <div id="profileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl p-5 max-w-xs w-full space-y-4 shadow-2xl relative text-center">
+                <button onclick="closeProfileModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <div class="w-16 h-16 rounded-full bg-brand-800 text-white font-bold text-xl flex items-center justify-center mx-auto shadow-md border-4 border-blue-100">
+                    ST
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-base text-gray-800">Saurabh Tripathi</h3>
+                    <p class="text-xs text-gray-500">3rd Year B.Tech (CSE) • SRMCEM</p>
+                    <span class="inline-block mt-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        <i class="fa-solid fa-shield-check mr-1"></i> Verified Campus Member
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded-xl border text-center">
+                    <div>
+                        <div class="font-bold text-brand-900 text-sm">4.9 ★</div>
+                        <div class="text-[10px] text-gray-500">Reputation</div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-brand-900 text-sm" id="profileListingsCount">0</div>
+                        <div class="text-[10px] text-gray-500">Listings</div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-brand-900 text-sm" id="profileExchangesCount">0</div>
+                        <div class="text-[10px] text-gray-500">Exchanges</div>
+                    </div>
+                </div>
+
+                <button onclick="closeProfileModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl text-xs transition">
+                    Close Profile
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Default Sample Data (Pre-seeded in LocalStorage)
+        const initialSampleItems = [
+            {
+                id: "item-101",
+                title: "Engineering Physics - Vol 1 (AKTU)",
+                cat: "books",
+                type: "free",
+                price: 0,
+                tag: "FREE",
+                dept: "CSE / ECE (KAS-101)",
+                seller: "Aman Gupta (4th Year)",
+                rating: "4.9",
+                location: "Hostel 2 Mess Gate",
+                icon: "fa-book",
+                color: "bg-blue-100 text-blue-700",
+                desc: "Clean condition without markings. Ready for immediate pickup."
+            },
+            {
+                id: "item-102",
+                title: "Arduino Uno Ultimate Starter Kit",
+                cat: "electronics",
+                type: "rent",
+                price: 40,
+                tag: "₹40/wk",
+                dept: "ECE / EEE Lab",
+                seller: "Rahul Verma (3rd Year)",
+                rating: "4.8",
+                location: "Central Library Entrance",
+                icon: "fa-microchip",
+                color: "bg-amber-100 text-amber-700",
+                desc: "Includes breadboard, jumper wires, sensors, and LCD display module."
+            },
+            {
+                id: "item-103",
+                title: "A2 Engineering Drafting Board & Mini Drafter",
+                cat: "drafting",
+                type: "rent",
+                price: 30,
+                tag: "₹30/wk",
+                dept: "ME / Civil Block",
+                seller: "Priya Sharma (2nd Year)",
+                rating: "5.0",
+                location: "Block A Canteen",
+                icon: "fa-compass-drafting",
+                color: "bg-emerald-100 text-emerald-700",
+                desc: "Sturdy board with smooth drafter scale. Perfect for 1st year engineering graphics."
+            },
+            {
+                id: "item-104",
+                title: "White Cotton Chemistry Lab Coat (Medium)",
+                cat: "others",
+                type: "free",
+                price: 0,
+                tag: "FREE",
+                dept: "Chemistry Lab",
+                seller: "Siddharth N. (2nd Year)",
+                rating: "4.7",
+                location: "Hostel 1 Gate",
+                icon: "fa-flask",
+                color: "bg-purple-100 text-purple-700",
+                desc: "Freshly washed. Medium size, full sleeve cotton apron."
+            },
+            {
+                id: "item-105",
+                title: "Casio FX-991EX Scientific Calculator",
+                cat: "electronics",
+                type: "sell",
+                price: 450,
+                tag: "₹450 (Sell)",
+                dept: "All Departments",
+                seller: "Neha Saxena (4th Year)",
+                rating: "4.9",
+                location: "Academic Block B",
+                icon: "fa-calculator",
+                color: "bg-blue-100 text-blue-800",
+                desc: "ClassWiz series solar & battery calculator in top condition."
+            }
+        ];
+
+        const initialNotifications = [
+            { id: 1, text: "Welcome to ShareHub! Borrow or donate campus gear effortlessly.", time: "Just now", unread: true },
+            { id: 2, text: "Reminder: Return 'Digital Electronics Lab Manual' by Friday.", time: "2 hrs ago", unread: true }
+        ];
+
+        // State Management with LocalStorage
+        let items = JSON.parse(localStorage.getItem('sharehub_items')) || initialSampleItems;
+        let exchanges = JSON.parse(localStorage.getItem('sharehub_exchanges')) || [
+            {
+                id: "ex-1",
+                itemId: "item-102",
+                title: "Arduino Uno Ultimate Starter Kit",
+                lender: "Rahul Verma (3rd Year CSE)",
+                priceTag: "₹40/week",
+                location: "Library Gate",
+                time: "Today, 4:30 PM",
+                status: "Active Handshake",
+                txId: "AKTU-2026-88291"
+            }
+        ];
+        let notifications = JSON.parse(localStorage.getItem('sharehub_notifications')) || initialNotifications;
+        let currentFilter = 'all';
+        let activeQRTransaction = null;
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            saveState();
+            renderItems(items);
+            renderExchanges();
+            renderNotifications();
+            updateStats();
+        });
+
+        function saveState() {
+            localStorage.setItem('sharehub_items', JSON.stringify(items));
+            localStorage.setItem('sharehub_exchanges', JSON.stringify(exchanges));
+            localStorage.setItem('sharehub_notifications', JSON.stringify(notifications));
+        }
+
+        // Toggle Desktop Responsive vs Mobile Frame View
+        function toggleViewMode() {
+            const container = document.getElementById('appContainer');
+            const icon = document.getElementById('viewModeIcon');
+            if (container.classList.contains('device-mobile')) {
+                container.classList.remove('device-mobile');
+                container.classList.add('device-responsive');
+                icon.className = 'fa-solid fa-compress text-sm';
+                showToast("Switched to Wide Responsive View");
+            } else {
+                container.classList.remove('device-responsive');
+                container.classList.add('device-mobile');
+                icon.className = 'fa-solid fa-expand text-sm';
+                showToast("Switched to Mobile Preview Mode");
+            }
+        }
+
+        // Toast Notification Display
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-800 text-white' : 'bg-gray-900 text-white';
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-info text-blue-400';
+
+            toast.className = `${bgClass} pointer-events-auto p-3 rounded-xl shadow-xl text-xs flex items-center justify-between gap-2 border border-white/10 transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid ${icon}"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Render Stream Listings
+        function renderItems(itemList) {
+            const container = document.getElementById('itemsContainer');
+            const counter = document.getElementById('itemCounter');
+            container.innerHTML = '';
+
+            counter.textContent = `${itemList.length} items available near you`;
+
+            if (itemList.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl border text-center space-y-2">
+                        <i class="fa-solid fa-box-open text-3xl text-gray-300"></i>
+                        <p class="text-xs font-medium text-gray-500">No matching campus items found.</p>
+                        <button onclick="clearSearch()" class="text-xs text-brand-700 font-semibold underline">Reset filters</button>
+                    </div>
+                `;
+                return;
+            }
+
+            itemList.forEach(item => {
+                const badgeColor = item.type === 'free' 
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                    : item.type === 'sell'
+                    ? 'bg-purple-100 text-purple-800 border-purple-200'
+                    : 'bg-blue-100 text-blue-800 border-blue-200';
+
+                const card = `
+                    <div class="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-sm flex gap-3 items-center hover:border-brand-300 transition duration-150">
+                        <div class="w-14 h-14 rounded-xl ${item.color} flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start gap-1">
+                                <h3 class="font-bold text-xs truncate text-gray-800">${escapeHtml(item.title)}</h3>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${badgeColor} whitespace-nowrap">${item.tag}</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
+                                <span>${escapeHtml(item.dept)}</span>
+                                <span>•</span>
+                                <span class="text-amber-500 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> ${item.rating}</span>
+                            </p>
+                            <div class="flex justify-between items-center mt-2 text-[10px] text-gray-500">
+                                <span class="truncate max-w-[130px]"><i class="fa-solid fa-location-dot text-red-500 mr-1"></i>${escapeHtml(item.location)}</span>
+                                <button onclick="openRequestModal('${item.id}')" class="bg-brand-800 hover:bg-brand-900 text-white px-3 py-1 rounded-lg font-semibold text-[10px] shadow transition">
+                                    Request
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        // Filter Logic
+        function filterItems() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            clearBtn.classList.toggle('hidden', query === '');
+
+            const filtered = items.filter(item => {
+                const matchesSearch = item.title.toLowerCase().includes(query) ||
+                                     item.dept.toLowerCase().includes(query) ||
+                                     item.seller.toLowerCase().includes(query) ||
+                                     (item.desc && item.desc.toLowerCase().includes(query));
+
+                const matchesFilter = (currentFilter === 'all') ||
+                                     (currentFilter === 'free' && item.type === 'free') ||
+                                     (currentFilter === 'rent' && item.type === 'rent') ||
+                                     (currentFilter === 'sell' && item.type === 'sell') ||
+                                     (item.cat === currentFilter);
+
+                return matchesSearch && matchesFilter;
+            });
+
+            renderItems(filtered);
+        }
+
+        function setFilter(filter, element) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-chip').forEach(btn => {
+                btn.className = 'filter-chip bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm hover:bg-gray-50 transition';
+            });
+            if (element) {
+                element.className = 'filter-chip active bg-brand-800 text-white px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap shadow-sm transition';
+            }
+            filterItems();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filterItems();
+        }
+
+        // Tab Switcher
+        function switchTab(tab) {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-add').classList.add('hidden');
+            document.getElementById('view-activity').classList.add('hidden');
+
+            document.getElementById('nav-home').className = 'flex flex-col items-center gap-1 text-gray-400 hover:text-brand-700 transition';
+            document.getElementById('nav-add').className = 'flex flex-col items-center gap-1 text-gray-400 hover:text-brand-700 transition';
+            document.getElementById('nav-activity').className = 'flex flex-col items-center gap-1 text-gray-400 hover:text-brand-700 transition relative';
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).className = 'flex flex-col items-center gap-1 text-brand-800 font-bold relative';
+        }
+
+        // Add Listing Price Input Toggle
+        function togglePriceInput(select) {
+            const priceInput = document.getElementById('priceInput');
+            const priceLabel = document.getElementById('priceLabel');
+
+            if (select.value === 'rent') {
+                priceInput.disabled = false;
+                priceInput.classList.remove('bg-gray-100');
+                priceInput.value = "30";
+                priceLabel.textContent = "Price (₹/week) *";
+            } else if (select.value === 'sell') {
+                priceInput.disabled = false;
+                priceInput.classList.remove('bg-gray-100');
+                priceInput.value = "200";
+                priceLabel.textContent = "Selling Price (₹) *";
+            } else {
+                priceInput.disabled = true;
+                priceInput.classList.add('bg-gray-100');
+                priceInput.value = "0";
+                priceLabel.textContent = "Price (Free)";
+            }
+        }
+
+        // Form Submission - Create New Listing
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('formTitle').value.trim();
+            const cat = document.getElementById('formCategory').value;
+            const dept = document.getElementById('formDept').value.trim() || 'General';
+            const type = document.getElementById('typeSelect').value;
+            const price = parseInt(document.getElementById('priceInput').value) || 0;
+            const location = document.getElementById('formLocation').value.trim();
+            const desc = document.getElementById('formDesc').value.trim();
+            
+            const selectedIcon = document.querySelector('input[name="iconOption"]:checked')?.value || 'fa-box';
+
+            let colorClass = 'bg-blue-100 text-blue-700';
+            if (cat === 'electronics') colorClass = 'bg-amber-100 text-amber-700';
+            if (cat === 'drafting') colorClass = 'bg-emerald-100 text-emerald-700';
+            if (cat === 'others') colorClass = 'bg-purple-100 text-purple-700';
+
+            let tag = 'FREE';
+            if (type === 'rent') tag = `₹${price}/wk`;
+            if (type === 'sell') tag = `₹${price} (Sell)`;
+
+            const newItem = {
+                id: 'item-' + Date.now(),
+                title,
+                cat,
+                type,
+                price,
+                tag,
+                dept,
+                seller: 'Saurabh Tripathi (Me)',
+                rating: '5.0',
+                location,
+                icon: selectedIcon,
+                color: colorClass,
+                desc
+            };
+
+            items.unshift(newItem);
+            saveState();
+
+            // Add Notification
+            notifications.unshift({
+                id: Date.now(),
+                text: `Your listing '${title}' is now live on campus stream!`,
+                time: "Just now",
+                unread: true
+            });
+            saveState();
+
+            renderItems(items);
+            renderNotifications();
+            updateStats();
+
+            document.getElementById('addListingForm').reset();
+            togglePriceInput(document.getElementById('typeSelect'));
+
+            showToast("Item listing published successfully!", "success");
+            switchTab('home');
+        }
+
+        // Open Request Modal
+        function openRequestModal(itemId) {
+            const item = items.find(i => i.id === itemId);
+            if (!item) return;
+
+            document.getElementById('reqItemId').value = item.id;
+            document.getElementById('reqItemName').textContent = item.title;
+            document.getElementById('reqItemPrice').textContent = item.tag;
+            document.getElementById('reqItemOwner').textContent = `Owner: ${item.seller}`;
+            document.getElementById('reqItemLoc').innerHTML = `<i class="fa-solid fa-location-dot text-red-500 mr-1"></i>Pickup: ${item.location}`;
+
+            document.getElementById('requestModal').classList.remove('hidden');
+        }
+
+        function closeRequestModal() {
+            document.getElementById('requestModal').classList.add('hidden');
+        }
+
+        // Confirm Item Request Flow
+        function confirmItemRequest(e) {
+            e.preventDefault();
+
+            const itemId = document.getElementById('reqItemId').value;
+            const item = items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const time = document.getElementById('reqTime').value;
+            const txId = "AKTU-2026-" + Math.floor(10000 + Math.random() * 90000);
+
+            const newExchange = {
+                id: 'ex-' + Date.now(),
+                itemId: item.id,
+                title: item.title,
+                lender: item.seller,
+                priceTag: item.tag,
+                location: item.location,
+                time: time,
+                status: "Active Handshake",
+                txId: txId
+            };
+
+            exchanges.unshift(newExchange);
+
+            notifications.unshift({
+                id: Date.now(),
+                text: `Handshake generated for ${item.title}. Meet at ${item.location}.`,
+                time: "Just now",
+                unread: true
+            });
+
+            saveState();
+            renderExchanges();
+            renderNotifications();
+            updateStats();
+
+            closeRequestModal();
+            showToast("Rental request sent! Check Activity tab.", "success");
+            switchTab('activity');
+        }
+
+        // Render Activity / Exchanges
+        function renderExchanges() {
+            const container = document.getElementById('activityContainer');
+            const badge = document.getElementById('exchangeCountBadge');
+            container.innerHTML = '';
+
+            const activeExchanges = exchanges.filter(e => e.status !== 'Completed');
+            badge.textContent = `${activeExchanges.length} Active`;
+
+            if (exchanges.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl border text-center space-y-2">
+                        <i class="fa-solid fa-handshake-slash text-3xl text-gray-300"></i>
+                        <p class="text-xs font-medium text-gray-500">No active exchanges or handshakes.</p>
+                        <button onclick="switchTab('home')" class="text-xs text-brand-700 font-semibold underline">Explore available items</button>
+                    </div>
+                `;
+                return;
+            }
+
+            exchanges.forEach(ex => {
+                const isCompleted = ex.status === 'Completed';
+                const statusBadge = isCompleted 
+                    ? 'bg-gray-100 text-gray-600 border-gray-300' 
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-200 pulse-subtle';
+
+                const card = `
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-start border-b pb-2.5">
+                            <div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${statusBadge}">${ex.status}</span>
+                                <h3 class="font-bold text-sm text-gray-800 mt-1">${escapeHtml(ex.title)}</h3>
+                                <p class="text-xs text-gray-500">Lender: ${escapeHtml(ex.lender)}</p>
+                            </div>
+                            <span class="text-xs font-bold text-brand-800 bg-blue-50 px-2 py-1 rounded">${ex.priceTag}</span>
+                        </div>
+
+                        <div class="bg-gray-50 p-2.5 rounded-lg text-xs space-y-1.5 text-gray-600">
+                            <p class="flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-red-500 w-4"></i> <span><strong>Pickup:</strong> ${escapeHtml(ex.location)}</span></p>
+                            <p class="flex items-center gap-1.5"><i class="fa-regular fa-clock text-brand-600 w-4"></i> <span><strong>Time:</strong> ${escapeHtml(ex.time)}</span></p>
+                        </div>
+
+                        ${!isCompleted ? `
+                            <button onclick="openQRModal('${ex.id}')" class="w-full bg-brand-800 hover:bg-brand-900 text-white py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow transition">
+                                <i class="fa-solid fa-qrcode"></i>
+                                <span>Show Verification QR Code</span>
+                            </button>
+                        ` : `
+                            <div class="text-center text-[11px] text-emerald-700 font-semibold bg-emerald-50 py-1.5 rounded-lg border border-emerald-100">
+                                <i class="fa-solid fa-check-circle mr-1"></i> Handshake Completed
+                            </div>
+                        `}
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        // QR Verification Modal
+        function openQRModal(exchangeId) {
+            const ex = exchanges.find(e => e.id === exchangeId);
+            if (!ex) return;
+
+            activeQRTransaction = ex;
+            document.getElementById('qrTxId').textContent = `TXID: ${ex.txId}`;
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+            activeQRTransaction = null;
+        }
+
+        function confirmHandshakeScan() {
+            if (!activeQRTransaction) return;
+
+            activeQRTransaction.status = 'Completed';
+            saveState();
+
+            renderExchanges();
+            closeQRModal();
+
+            showToast("QR Verified! Handshake complete & item handed over.", "success");
+        }
+
+        // Notifications Drawer Toggle
+        function toggleNotificationsDrawer() {
+            const drawer = document.getElementById('notificationsDrawer');
+            drawer.classList.toggle('hidden');
+
+            if (!drawer.classList.contains('hidden')) {
+                notifications.forEach(n => n.unread = false);
+                saveState();
+                renderNotifications();
+            }
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notificationsContainer');
+            const badge = document.getElementById('notificationBadge');
+            
+            const hasUnread = notifications.some(n => n.unread);
+            badge.style.display = hasUnread ? 'block' : 'none';
+
+            container.innerHTML = '';
+            notifications.forEach(n => {
+                container.innerHTML += `
+                    <div class="p-2.5 rounded-lg border ${n.unread ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} space-y-1">
+                        <p class="text-gray-800 font-medium">${escapeHtml(n.text)}</p>
+                        <p class="text-[10px] text-gray-400">${n.time}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Profile Modal
+        function openProfileModal() {
+            updateStats();
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').classList.add('hidden');
+        }
+
+        function updateStats() {
+            const userListings = items.filter(i => i.seller.includes('Saurabh')).length;
+            document.getElementById('profileListingsCount').textContent = userListings;
+            document.getElementById('profileExchangesCount').textContent = exchanges.length;
+        }
+
+        // Utility: HTML Escaping
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
